@@ -2810,6 +2810,7 @@ static void sec_bat_cc_cv_mode_check(struct sec_battery_info *battery)
 
 	if ( (battery->wc_status != SEC_WIRELESS_PAD_NONE) &&
 		!battery->full_mode &&
+		battery->capacity >= 99 &&
 		battery->siop_level == 100) {
 		battery->full_mode = true;
 
@@ -2929,6 +2930,45 @@ static void sec_bat_fw_update_work(struct sec_battery_info *battery, int mode)
 			break;
 		default:
 			break;
+	}
+}
+
+static void sec_bat_fw_init_work(struct work_struct *work)
+{
+	struct sec_battery_info *battery = container_of(work,
+				struct sec_battery_info, fw_init_work.work);
+
+	union power_supply_propval value;
+	int otg_status;
+	int wpc_det;
+
+	dev_info(battery->dev, "%s \n", __func__);
+
+	wpc_det = gpio_get_value(battery->pdata->wpc_det);
+
+	pr_info("%s wpc_det = %d \n", __func__,wpc_det);
+
+	psy_do_property(battery->pdata->charger_name, get,
+		POWER_SUPPLY_PROP_CHARGE_OTG_CONTROL, value);
+	otg_status = value.intval;
+	pr_info("%s otg = %d \n", __func__, otg_status);
+
+	if(!otg_status && !wpc_det) {
+		pr_info("%s otg on \n", __func__);
+		value.intval = true;
+		psy_do_property(battery->pdata->charger_name, set,
+			POWER_SUPPLY_PROP_CHARGE_OTG_CONTROL, value);
+	}
+
+	value.intval = SEC_WIRELESS_RX_INIT;
+	psy_do_property(battery->pdata->wireless_charger_name, set,
+		POWER_SUPPLY_PROP_CHARGE_POWERED_OTG_CONTROL, value);
+
+	if(!otg_status && !wpc_det) {
+		pr_info("%s otg off \n", __func__);
+		value.intval = false;
+		psy_do_property(battery->pdata->charger_name, set,
+			POWER_SUPPLY_PROP_CHARGE_OTG_CONTROL, value);
 	}
 }
 
@@ -3286,7 +3326,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 
 #if defined(CONFIG_CALC_TIME_TO_FULL)
 		queue_delayed_work_on(0, battery->monitor_wqueue, &battery->timetofull_work,
-					msecs_to_jiffies(5000));
+					msecs_to_jiffies(7000));
 #endif
 #if defined(ANDROID_ALARM_ACTIVATED)
 		/* No need for wakelock in Alarm */
@@ -5888,7 +5928,7 @@ static int sec_bat_parse_dt(struct device *dev,
 	unsigned int i;
 	const u32 *p;
 	u32 temp;
-#ifdef CONFIG_SEC_FACTORY
+#if defined(CONFIG_SEC_FACTORY) || defined(CONFIG_WIRELESS_FIRMWARE_UPDATE)
 	enum of_gpio_flags irq_gpio_flags;
 #endif
 	if (!np) {
@@ -6619,6 +6659,15 @@ static int sec_bat_parse_dt(struct device *dev,
 	}
 #endif
 
+#if defined(CONFIG_WIRELESS_FIRMWARE_UPDATE)
+		/* wpc_det */
+		ret = pdata->wpc_det = of_get_named_gpio_flags(np, "battery,wpc_det",
+				0, &irq_gpio_flags);
+		if (ret < 0) {
+			pr_info("%s : can't get wpc_det\r\n", __func__);
+		}
+#endif
+
 	ret = of_property_read_u32(np, "battery,chg_float_voltage",
 		(unsigned int *)&pdata->chg_float_voltage);
 	if (ret)
@@ -6925,6 +6974,10 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 #endif
 	INIT_DELAYED_WORK(&battery->siop_work, sec_bat_siop_work);
 
+#if defined(CONFIG_WIRELESS_FIRMWARE_UPDATE)
+	INIT_DELAYED_WORK(&battery->fw_init_work, sec_bat_fw_init_work);
+#endif
+
 	switch (pdata->polling_type) {
 	case SEC_BATTERY_MONITOR_WORKQUEUE:
 		INIT_DELAYED_WORK(&battery->polling_work,
@@ -7015,6 +7068,10 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 			"%s : Failed to create_attrs\n", __func__);
 		goto err_req_irq;
 	}
+
+#if defined(CONFIG_WIRELESS_FIRMWARE_UPDATE)
+	queue_delayed_work_on(0, battery->monitor_wqueue, &battery->fw_init_work, 0);
+#endif
 
 #if defined(CONFIG_WIRELESS_CHARGER_HIGH_VOLTAGE)
 	value.intval = 0;

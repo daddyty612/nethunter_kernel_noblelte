@@ -405,7 +405,7 @@ static void max77833_check_wpc(struct max77833_charger_data *charger)
 		}
 
 		cnt_iin ++;
-		if(cnt_iin >= 3) {
+		if(cnt_iin >= 4) {
 			cnt_iin = 0;
 			value.intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 			psy_do_property(charger->pdata->wireless_charger_name, set,
