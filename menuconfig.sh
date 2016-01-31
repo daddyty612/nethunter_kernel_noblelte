@@ -4,20 +4,9 @@
 # root directory of NetHunter noblelte git repo (default is this script's location)
 RDIR=$(pwd)
 
-[ "$1" ] && {
-	VARIANT=$1
-} || {
-	VARIANT=spr
-}
-
 export ARCH=arm64
-DEFCONFIG=nethunter_noblelte${VARIANT}_defconfig
+DEFCONFIG=nethunter_defconfig
 DEFCONFIG_FILE=$RDIR/arch/$ARCH/configs/$DEFCONFIG
-
-[ -f "$DEFCONFIG_FILE" ] || {
-	echo "Device variant/carrier $VARIANT not found in $ARCH configs!"
-	exit 1
-}
 
 cd $RDIR
 echo "Cleaning build..."

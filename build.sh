@@ -12,11 +12,26 @@
 #
 ##################### VARIANTS #####################
 #
+# can = nobleltecan (Canada)
+#       SM-N920W8
+#
+# eur = noblelte (Europe)
+#       SM-N920C
+#
 # spr = nobleltespr (Sprint)
 #       SM-N920P
 #
-# can = nobleltecan (Canada)
-#       SM-N920W8
+# tmo = nobleltetmo (T-Mobile)
+#       SM-N920T
+#
+# ktt = nobleltektt (KT Corporation)
+#       SM-N920K
+#
+# lgt = nobleltelgt (LG Telecom)
+#       SM-N920L
+#
+# skt = nobleltektt (SK Telecom)
+#       SM-N920S
 #
 ###################### CONFIG ######################
 
@@ -41,7 +56,7 @@ THREADS=5
 	VARIANT=spr
 }
 
-[ -f "$RDIR/arch/arm64/configs/nethunter_noblelte${VARIANT}_defconfig" ] || {
+[ -f "$RDIR/arch/arm64/configs/variant_${VARIANT}_defconfig" ] || {
 	echo "Device variant/carrier $VARIANT not found in arm configs!"
 	exit 1
 }
@@ -63,7 +78,8 @@ BUILD_KERNEL()
 {
 	echo "Creating kernel config..."
 	cd $RDIR
-	make -C $RDIR nethunter_noblelte${VARIANT}_defconfig
+	make -C $RDIR nethunter_defconfig \
+		VARIANT_DEFCONFIG=variant_${VARIANT}_defconfig
 	echo "Starting build for $VARIANT..."
 	make -C $RDIR -j"$THREADS"
 }
