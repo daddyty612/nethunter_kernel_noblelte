@@ -374,6 +374,9 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 	/* Private value of ecryptfs_dentry allocated in
 	 * ecryptfs_lookup() */
 	struct ecryptfs_file_info *file_info;
+#ifdef CONFIG_SDP
+	struct ecryptfs_mount_crypt_stat *mount_crypt_stat;
+#endif
 
 	/* Released in ecryptfs_release or end of function if failure */
 	file_info = kmem_cache_zalloc(ecryptfs_file_info_cache, GFP_KERNEL);
@@ -412,6 +415,8 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 		file, ecryptfs_inode_to_private(inode)->lower_file);
 	if (S_ISDIR(ecryptfs_dentry->d_inode->i_mode)) {
 #ifdef CONFIG_SDP
+		mount_crypt_stat = &ecryptfs_superblock_to_private(
+							inode->i_sb)->mount_crypt_stat;
 		/*
 		 * it's possible to have a sensitive directory. (vault)
 		 */
