@@ -17,11 +17,8 @@
 #include <linux/elevator.h>
 #include <linux/bio.h>
 #include <linux/module.h>
-#include <linux/init.h>
-#include <linux/version.h>
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
 #include <linux/slab.h>
-#endif
+#include <linux/init.h>
 
 enum { ASYNC, SYNC };
 
@@ -84,18 +81,6 @@ sio_add_request(struct request_queue *q, struct request *rq)
 	rq_set_fifo_time(rq, jiffies + sd->fifo_expire[sync][data_dir]);
 	list_add_tail(&rq->queuelist, &sd->fifo_list[sync][data_dir]);
 }
-
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
-static int
-sio_queue_empty(struct request_queue *q)
-{
-	struct sio_data *sd = q->elevator->elevator_data;
-
-	/* Check if fifo lists are empty */
-	return list_empty(&sd->fifo_list[SYNC][READ]) && list_empty(&sd->fifo_list[SYNC][WRITE]) &&
-	       list_empty(&sd->fifo_list[ASYNC][READ]) && list_empty(&sd->fifo_list[ASYNC][WRITE]);
-}
-#endif
 
 static struct request *
 sio_expired_request(struct sio_data *sd, int sync, int data_dir)
@@ -245,23 +230,23 @@ sio_latter_request(struct request_queue *q, struct request *rq)
 	return list_entry(rq->queuelist.next, struct request, queuelist);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-static void *
-#else
 static int
-#endif
-sio_init_queue(struct request_queue *q)
+sio_init_queue(struct request_queue *q, struct elevator_type *e)
 {
 	struct sio_data *sd;
+	struct elevator_queue *eq;
+
+	eq = elevator_alloc(q, e);
+	if (!eq)
+		return -ENOMEM;
 
 	/* Allocate structure */
 	sd = kmalloc_node(sizeof(*sd), GFP_KERNEL, q->node);
-	if (!sd)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-		return NULL;
-#else
+	if (!sd) {
+		kobject_put(&eq->kobj);
 		return -ENOMEM;
-#endif
+	}
+	eq->elevator_data = sd;
 
 	/* Initialize fifo lists */
 	INIT_LIST_HEAD(&sd->fifo_list[SYNC][READ]);
@@ -276,12 +261,11 @@ sio_init_queue(struct request_queue *q)
 	sd->fifo_expire[ASYNC][READ] = async_read_expire;
 	sd->fifo_expire[ASYNC][WRITE] = async_write_expire;
 	sd->fifo_batch = fifo_batch;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-	return sd;
-#else
-	q->elevator->elevator_data = sd;
+
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
 	return 0;
-#endif
 }
 
 static void
@@ -377,9 +361,6 @@ static struct elevator_type iosched_sio = {
 		.elevator_merge_req_fn		= sio_merged_requests,
 		.elevator_dispatch_fn		= sio_dispatch_requests,
 		.elevator_add_req_fn		= sio_add_request,
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
-		.elevator_queue_empty_fn	= sio_queue_empty,
-#endif
 		.elevator_former_req_fn		= sio_former_request,
 		.elevator_latter_req_fn		= sio_latter_request,
 		.elevator_init_fn		= sio_init_queue,
@@ -394,9 +375,7 @@ static struct elevator_type iosched_sio = {
 static int __init sio_init(void)
 {
 	/* Register elevator */
-	elv_register(&iosched_sio);
-
-	return 0;
+	return elv_register(&iosched_sio);;
 }
 
 static void __exit sio_exit(void)
@@ -411,4 +390,4 @@ module_exit(sio_exit);
 MODULE_AUTHOR("Miguel Boton");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Simple IO scheduler");
-MODULE_VERSION("0.2");
+MODULE_VERSION("0.3");
