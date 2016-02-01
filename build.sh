@@ -24,14 +24,8 @@
 # tmo = nobleltetmo (T-Mobile)
 #       SM-N920T
 #
-# ktt = nobleltektt (KT Corporation)
-#       SM-N920K
-#
-# lgt = nobleltelgt (LG Telecom)
-#       SM-N920L
-#
-# skt = nobleltektt (SK Telecom)
-#       SM-N920S
+# kor = nobleltektt, nobleltelgt, noblelteskt (Korea)
+#       SM-N920K,    SM-N920L,    SM-N920S
 #
 ###################### CONFIG ######################
 
