@@ -17,10 +17,10 @@ KDIR=$RDIR/arch/arm64/boot
 
 MOVE_IMAGES()
 {
-	echo "Moving Image.gz to $VARIANT_DIR/zImage..."
+	echo "Moving kernel Image to $VARIANT_DIR/Image..."
 	rm -rf $VARIANT_DIR
 	mkdir $VARIANT_DIR
-	mv $KDIR/Image.gz $VARIANT_DIR/zImage
+	mv $KDIR/Image $VARIANT_DIR/Image
 }
 
 mkdir -p $OUT_DIR
