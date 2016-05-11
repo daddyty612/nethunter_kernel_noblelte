@@ -46,7 +46,7 @@ RDIR=$(pwd)
 VER=$(cat $RDIR/VERSION)
 
 # directory containing cross-compile arm64 toolchain
-TOOLCHAIN=$HOME/build/toolchain/android-arm64-4.9
+TOOLCHAIN=$HOME/aarch64-linux-android-4.9
 
 # amount of cpu threads to use in kernel make process
 THREADS=5
