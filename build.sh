@@ -56,12 +56,12 @@ THREADS=5
 export ARCH=arm64
 export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-android-
 
-[ "$DEVICE" ] || DEVICE=noblelte
+[ "$DEVICE" ] || DEVICE=zeroflte
 [ "$TARGET" ] || TARGET=twrp
 [ "$1" ] && {
 	VARIANT=$1
 } || {
-	VARIANT=eur
+	VARIANT=spr
 }
 DEFCONFIG=${TARGET}_defconfig
 DEVICE_DEFCONFIG=${DEVICE}/device_defconfig
